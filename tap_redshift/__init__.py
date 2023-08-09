@@ -51,7 +51,7 @@ REQUIRED_CONFIG_KEYS = [
 ]
 
 STRING_TYPES = {'char', 'character', 'nchar', 'bpchar', 'text', 'varchar',
-                'character varying', 'nvarchar'}
+                'character varying', 'nvarchar', 'super'}
 
 BYTES_FOR_INTEGER_TYPE = {
     'int2': 2,

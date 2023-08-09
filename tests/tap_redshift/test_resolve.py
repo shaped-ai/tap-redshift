@@ -60,11 +60,11 @@ class TestResolve(object):
         assert_that(get_selected_properties(entry), equal_to(expected))
 
     def test_resolve_catalog(
-            self, expected_catalog_discovered, resolvable_catalog_param):
+            self, expected_catalog_discovered_fixture, resolvable_catalog_param):
         catalog, streams_and_properties = resolvable_catalog_param
-        state = tap_redshift.build_state({}, expected_catalog_discovered)
+        state = tap_redshift.build_state({}, expected_catalog_discovered_fixture)
         resolved_catalog = resolve_catalog(
-            expected_catalog_discovered, catalog, state)
+            expected_catalog_discovered_fixture, catalog, state)
 
         assert_that([entry.stream for entry in resolved_catalog.streams],
                     contains_inanyorder(*set(streams_and_properties.keys())))

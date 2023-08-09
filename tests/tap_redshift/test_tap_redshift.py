@@ -69,6 +69,12 @@ sample_db_data = {
             'pos': 7,
             'name': 'date_created',
             'nullable': 'YES'
+        },
+        {
+            'type': 'super',
+            'pos': 8,
+            'name': 'json_column',
+            'nullable': 'YES'
         }
     ]
 }
@@ -127,7 +133,14 @@ expected_result = {
                         ],
                         'format': 'date-time',
                         'inclusion': 'available'
-                    }
+                    },
+                    'super': {
+                        'type': [
+                            'null',
+                            'string'
+                        ],
+                        'inclusion': 'available'
+                    },
                 },
             },
             'metadata': [
@@ -308,7 +321,14 @@ class TestRedShiftTap(object):
         expected_schema = stream_schema['schema']['properties']['created_at']
         assert_that(column_schema, equal_to(expected_schema))
 
-    def test_table_metadata(self, discovery_conn, expected_catalog_from_db):
+    def test_type_super(self):
+        col = sample_db_data['columns'][7]
+        column_schema = tap_redshift.schema_for_column(col).to_dict()
+        stream_schema = expected_result['streams'][0]
+        expected_schema = stream_schema['schema']['properties']['created_at']
+        assert_that(column_schema, equal_to(expected_schema))
+
+    def test_table_metadata(self, discovery_conn):
         actual_catalog = tap_redshift.discover_catalog(
             discovery_conn, 'test-db', 'public'
         )

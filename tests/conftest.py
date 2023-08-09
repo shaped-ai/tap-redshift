@@ -20,6 +20,7 @@ import pytest
 from doublex import Mock, ANY_ARG, Stub
 from singer.catalog import Catalog
 
+
 # TODO Smarter and less verbose fixtures
 # TODO Possibly move from conftest.py if not shared
 
@@ -159,8 +160,8 @@ def expected_catalog_from_db():
              {'breadcrumb': (),
               'metadata': {'selected-by-default': False,
                            'forced-replication-method': {
-                            'replication-method': 'FULL_TABLE',
-                            'reason': 'No replication keys found from table'
+                               'replication-method': 'FULL_TABLE',
+                               'reason': 'No replication keys found from table'
                            },
                            'table-key-properties': ['col1', 'col2'],
                            'is-view': False,
@@ -191,8 +192,8 @@ def expected_catalog_from_db():
              {'breadcrumb': (),
               'metadata': {'selected-by-default': False,
                            'forced-replication-method': {
-                            'replication-method': 'FULL_TABLE',
-                            'reason': 'No replication keys found from table'
+                               'replication-method': 'FULL_TABLE',
+                               'reason': 'No replication keys found from table'
                            },
                            'view-key-properties': [],
                            'is-view': True,
@@ -209,8 +210,76 @@ def expected_catalog_from_db():
          ]}
     ]})
 
+@pytest.fixture
+def expected_catalog_discovered_fixture():
+    return Catalog.from_dict({
+        'streams': [{
+            'database_name': 'FakeDB',
+            'table_name': 'category',
+            'tap_stream_id': 'dev-category',
+            'is_view': False,
+            'stream': 'category',
+            'schema': {
+                'type': 'object',
+                'properties': {
+                    'id': {
+                        'minimum': -2147483648,
+                        'type': 'integer',
+                        'maximum': 2147483647,
+                        'inclusion': 'available'
+                    },
+                    'name': {
+                        'type': 'string',
+                        'inclusion': 'available'
+                    },
+                    'address': {
+                        'type': 'string',
+                        'inclusion': 'unsupported'
+                    }
+                }
+            },
+            'metadata': [
+                {
+                    'breadcrumb': (),
+                    'metadata': {
+                        'selected-by-default': False
+                    }
+                },
+                {
+                    'breadcrumb': (
+                        'properties',
+                        'id'
+                    ),
+                    'metadata': {
+                        'selected-by-default': True,
+                        'sql-datatype': 'int2'
+                    }
+                },
+                {
+                    'breadcrumb': (
+                        'properties',
+                        'name'
+                    ),
+                    'metadata': {
+                        'selected-by-default': True,
+                        'sql-datatype': 'varchar'
+                    }
+                },
+                {
+                    'breadcrumb': (
+                        'properties',
+                        'address'
+                    ),
+                    'metadata': {
+                        'selected-by-default': True,
+                        'sql-datatype': 'varchar'
+                    }
+                }
+            ]
+        }]
+    })
 
-@pytest.fixture()
+
 def expected_catalog_discovered():
     return Catalog.from_dict({
         'streams': [{
@@ -280,7 +349,6 @@ def expected_catalog_discovered():
     })
 
 
-@pytest.fixture()
 def expected_catalog_selected_table():
     return Catalog.from_dict({
         'streams': [{
@@ -350,7 +418,6 @@ def expected_catalog_selected_table():
     })
 
 
-@pytest.fixture()
 def expected_catalog_selected_table_legacy():
     return Catalog.from_dict({
         'streams': [{
@@ -421,7 +488,6 @@ def expected_catalog_selected_table_legacy():
     })
 
 
-@pytest.fixture()
 def expected_catalog_unselected_table():
     return Catalog.from_dict({
         'streams': [{
@@ -562,7 +628,6 @@ def expected_catalog_selected_default_col():
     })
 
 
-@pytest.fixture()
 def expected_catalog_selected_col():
     return Catalog.from_dict({
         'streams': [{
@@ -632,7 +697,6 @@ def expected_catalog_selected_col():
     })
 
 
-@pytest.fixture()
 def expected_catalog_selected_col_legacy():
     return Catalog.from_dict({
         'streams': [{
@@ -701,7 +765,6 @@ def expected_catalog_selected_col_legacy():
     })
 
 
-@pytest.fixture()
 def expected_catalog_unselected_col():
     return Catalog.from_dict({
         'streams': [{
@@ -772,7 +835,6 @@ def expected_catalog_unselected_col():
     })
 
 
-@pytest.fixture()
 def expected_superset_catalog_selected_default_col():
     return Catalog.from_dict({
         'streams': [{
@@ -856,7 +918,6 @@ def expected_superset_catalog_selected_default_col():
     })
 
 
-@pytest.fixture()
 def expected_subset_catalog_selected_default_col():
     return Catalog.from_dict({
         'streams': [{
