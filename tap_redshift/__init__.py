@@ -370,7 +370,10 @@ def sync_table(connection, catalog_entry, state):
         # first replication. That is, clients have never seen rows for this
         # stream before, so they can immediately acknowledge the present
         # version.
-        if replication_key or bookmark_is_empty:
+
+        # (Ben Patch): Do not yield activate version message if there is a
+        # replication key as it will delete all records in the target table.
+        if bookmark_is_empty:
             yield activate_version_message
 
         if replication_key:
