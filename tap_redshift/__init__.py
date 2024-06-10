@@ -400,7 +400,7 @@ def sync_table(connection, catalog_entry, state):
         query_string = cursor.mogrify(select, params)
         LOGGER.info('Running {}'.format(query_string))
 
-        cursor.itersize = ROWS_PER_NETWORK_CALL
+        cursor.itersize = CONFIG.get('batch_size', ROWS_PER_NETWORK_CALL)
         cursor.execute(select, params)
         rows_saved = 0
 
