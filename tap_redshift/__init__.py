@@ -543,6 +543,7 @@ def build_state(raw_state, catalog):
 def main_impl():
     args = utils.parse_args(REQUIRED_CONFIG_KEYS)
     CONFIG.update(args.config)
+    LOGGER.debug(f'Starting tap-redshift with config {CONFIG}')
     connection = open_connection(args.config)
     db_schema = args.config.get('schema', 'public')
     db_name = args.config.get('dbname', 'dev')
