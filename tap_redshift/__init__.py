@@ -412,44 +412,44 @@ def sync_table(connection, catalog_entry, state):
             counter.tags['database'] = catalog_entry.database
             counter.tags['table'] = catalog_entry.table
 
-            while True:
-                select = base_select + ' LIMIT {} OFFSET {}'.format(limit, offset)
+            # Use a server-side cursor for efficient large result set handling
+            with connection.cursor(name=f"redshift_cursor_{secrets.token_hex(8)}") as cursor:
+                select = base_select
                 query_string = cursor.mogrify(select, params)
                 LOGGER.info('Running {}'.format(query_string))
 
                 cursor.execute(select, params)
-                rows_fetched = 0
+                while True:
+                    rows_fetched = 0
 
-                for row in cursor:
-                    counter.increment()
-                    rows_saved += 1
-                    rows_fetched += 1
-                    record_message = row_to_record(catalog_entry,
-                                                   stream_version,
-                                                   row,
-                                                   columns,
-                                                   time_extracted)
-                    yield record_message
+                    for row in cursor.fetchmany(batch_size):
+                        counter.increment()
+                        rows_saved += 1
+                        rows_fetched += 1
+                        record_message = row_to_record(catalog_entry,
+                                                        stream_version,
+                                                        row,
+                                                        columns,
+                                                        time_extracted)
+                        yield record_message
 
-                    if replication_key is not None:
-                        state = singer.write_bookmark(
-                            state,
-                            tap_stream_id,
-                            'replication_key_value',
-                            record_message.record[replication_key]
-                        )
-                    if rows_saved % 1000 == 0:
-                        yield singer.StateMessage(value=copy.deepcopy(state))
+                        if replication_key is not None:
+                            state = singer.write_bookmark(
+                                state,
+                                tap_stream_id,
+                                'replication_key_value',
+                                record_message.record[replication_key]
+                            )
+                        if rows_saved % 1000 == 0:
+                            yield singer.StateMessage(value=copy.deepcopy(state))
 
-                if rows_fetched < limit:
-                    break
-
-                offset += limit
+                    if rows_fetched < batch_size:
+                        break
 
         if not replication_key:
             yield activate_version_message
             state = singer.write_bookmark(state, catalog_entry.tap_stream_id,
-                                          'version', None)
+                                            'version', None)
 
         yield singer.StateMessage(value=copy.deepcopy(state))
 
