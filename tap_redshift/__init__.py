@@ -394,7 +394,6 @@ def sync_table(connection, catalog_entry, state):
                     replication_key, replication_key
                 )
             )
-                      
             params['replication_key_value'] = replication_key_value
 
         elif replication_key is not None:
