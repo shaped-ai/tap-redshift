@@ -282,7 +282,8 @@ def open_connection(config):
     user = config['user'],
     password = config['password']
     LOGGER.info(
-        f"Attempting Redshift connection: {dbname[0]} {host[0]} {port[0]}")
+        f"Attempting Redshift connection: {dbname=}, {user=}, {host=}, {port=}"
+    )
     connection = psycopg2.connect(
         host=host[0],
         port=port[0],
