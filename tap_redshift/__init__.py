@@ -336,7 +336,7 @@ def sync_table(connection, catalog_entry, state):
     with connection.cursor(f"redshift_cursor_{secrets.token_hex(8)}") as cursor:
         schema, table = catalog_entry.table.split('.')
         database = catalog_entry.database
-        select = 'SELECT {} FROM {}.{}.{}'.format(
+        base_select = 'SELECT {} FROM {}.{}.{}'.format(
             ','.join('"{}"'.format(c) for c in columns),
             '"{}"'.format(database),
             '"{}"'.format(schema),
@@ -389,44 +389,55 @@ def sync_table(connection, catalog_entry, state):
             if entry_schema.properties[replication_key].format == 'date-time':
                 replication_key_value = pendulum.parse(replication_key_value)
 
-            select += ' WHERE {} >= %(replication_key_value)s ORDER BY {} ' \
+            base_select += ' WHERE {} >= %(replication_key_value)s ORDER BY {} '
                       'ASC'.format(replication_key, replication_key)
             params['replication_key_value'] = replication_key_value
 
         elif replication_key is not None:
-            select += ' ORDER BY {} ASC'.format(replication_key)
+            base_select += ' ORDER BY {} ASC'.format(replication_key)
 
         time_extracted = utils.now()
-        query_string = cursor.mogrify(select, params)
-        LOGGER.info('Running {}'.format(query_string))
-
         batch_size = int(CONFIG.get('batch_size', ROWS_PER_NETWORK_CALL))
         LOGGER.info(f"Batch size: {batch_size}")
         cursor.itersize = batch_size
-        cursor.execute(select, params)
         rows_saved = 0
+        offset = 0
+        limit = batch_size
 
         with metrics.record_counter(None) as counter:
             counter.tags['database'] = catalog_entry.database
             counter.tags['table'] = catalog_entry.table
-            for row in cursor:
-                counter.increment()
-                rows_saved += 1
-                record_message = row_to_record(catalog_entry,
-                                               stream_version,
-                                               row,
-                                               columns,
-                                               time_extracted)
-                yield record_message
 
-                if replication_key is not None:
-                    state = singer.write_bookmark(state,
-                                                  tap_stream_id,
-                                                  'replication_key_value',
-                                                  record_message.record[
-                                                      replication_key])
-                if rows_saved % 1000 == 0:
-                    yield singer.StateMessage(value=copy.deepcopy(state))
+            while True:
+                select = base_select + ' LIMIT {} OFFSET {}'.format(limit, offset)
+                query_string = cursor.mogrify(select, params)
+                LOGGER.info('Running {}'.format(query_string))
+
+                cursor.execute(select, params)
+                rows = cursor.fetchall()
+                if not rows:
+                    break
+
+                for row in rows:
+                    counter.increment()
+                    rows_saved += 1
+                    record_message = row_to_record(catalog_entry,
+                                                   stream_version,
+                                                   row,
+                                                   columns,
+                                                   time_extracted)
+                    yield record_message
+
+                    if replication_key is not None:
+                        state = singer.write_bookmark(
+                            state,
+                            tap_stream_id,
+                            'replication_key_value',
+                            record_message.record[replication_key]
+                        )
+                    if rows_saved % 1000 == 0:
+                        yield singer.StateMessage(value=copy.deepcopy(state))
+                offset += limit
 
         if not replication_key:
             yield activate_version_message
