@@ -418,13 +418,12 @@ def sync_table(connection, catalog_entry, state):
                 LOGGER.info('Running {}'.format(query_string))
 
                 cursor.execute(select, params)
-                rows = cursor.fetchall()
-                if not rows:
-                    break
+                rows_fetched = 0
 
-                for row in rows:
+                for row in cursor:
                     counter.increment()
                     rows_saved += 1
+                    rows_fetched += 1
                     record_message = row_to_record(catalog_entry,
                                                    stream_version,
                                                    row,
@@ -441,6 +440,10 @@ def sync_table(connection, catalog_entry, state):
                         )
                     if rows_saved % 1000 == 0:
                         yield singer.StateMessage(value=copy.deepcopy(state))
+
+                if rows_fetched < limit:
+                    break
+
                 offset += limit
 
         if not replication_key:
