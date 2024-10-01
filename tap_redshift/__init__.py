@@ -160,7 +160,7 @@ def discover_catalog(conn, db_name, db_schemas):
         metadata = create_column_metadata(
             db_name, cols, is_view, table_name, key_properties)
         qualified_table_name = '{}-{}'.format(
-            table_spec_dict.get(table_name)['tabble_schema'],
+            table_spec_dict.get(table_name)['table_schema'],
             table_name,
         )
         tap_stream_id = '{}-{}'.format(
