@@ -160,7 +160,7 @@ def discover_catalog(conn, db_name, db_schemas):
         metadata = create_column_metadata(
             db_name, cols, is_view, table_name, key_properties)
         qualified_table_name = '{}-{}'.format(
-            table_spec_dict.get(table_name)['table_schema'],
+            table_spec_dict.get(table_name)['tabble_schema'],
             table_name,
         )
         tap_stream_id = '{}-{}'.format(
@@ -334,7 +334,7 @@ def sync_table(connection, catalog_entry, state):
     tap_stream_id = catalog_entry.tap_stream_id
     LOGGER.info('Beginning sync for {} table'.format(tap_stream_id))
     with connection.cursor(f"redshift_cursor_{secrets.token_hex(8)}") as cursor:
-        schema, table = catalog_entry.table.split('.')
+        schema, table = catalog_entry.table.split('-')
         database = catalog_entry.database
         select = 'SELECT {} FROM {}.{}.{}'.format(
             ','.join('"{}"'.format(c) for c in columns),
