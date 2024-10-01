@@ -159,11 +159,11 @@ def discover_catalog(conn, db_name, db_schemas):
         db_name = conn.get_dsn_parameters()['dbname']
         metadata = create_column_metadata(
             db_name, cols, is_view, table_name, key_properties)
-        qualified_table_name = '{}.{}'.format(
+        qualified_table_name = '{}-{}'.format(
             table_spec_dict.get(table_name)['table_schema'],
             table_name,
         )
-        tap_stream_id = '{}.{}'.format(
+        tap_stream_id = '{}-{}'.format(
             db_name, qualified_table_name)
 
         entry = CatalogEntry(
