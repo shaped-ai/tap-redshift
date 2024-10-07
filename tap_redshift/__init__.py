@@ -409,31 +409,43 @@ def sync_table(connection, catalog_entry, state):
         with metrics.record_counter(None) as counter:
             counter.tags['database'] = catalog_entry.database
             counter.tags['table'] = catalog_entry.table
-            for row in cursor:
-                counter.increment()
-                rows_saved += 1
-                record_message = row_to_record(catalog_entry,
-                                               stream_version,
-                                               row,
-                                               columns,
-                                               time_extracted)
-                yield record_message
 
-                if replication_key is not None:
-                    state = singer.write_bookmark(state,
-                                                  tap_stream_id,
-                                                  'replication_key_value',
-                                                  record_message.record[
-                                                      replication_key])
-                if rows_saved % 1000 == 0:
-                    yield singer.StateMessage(value=copy.deepcopy(state))
+            # Fetch the first batch of rows.
+            rows = cursor.fetchmany(batch_size)
 
-        if not replication_key:
-            yield activate_version_message
-            state = singer.write_bookmark(state, catalog_entry.tap_stream_id,
-                                          'version', None)
+            # Continue processing while there are rows to be processed.
+            while rows:
+                for row in rows:
+                    counter.increment()
+                    rows_saved += 1
 
-        yield singer.StateMessage(value=copy.deepcopy(state))
+                    record_message = row_to_record(
+                        catalog_entry,
+                        stream_version,
+                        row,
+                        columns,
+                        time_extracted
+                    )
+                    yield record_message
+
+                    # Update the replication key value in the state
+                    if replication_key is not None:
+                        state = singer.write_bookmark(
+                            state,
+                            tap_stream_id,
+                            'replication_key_value',
+                            record_message.record[replication_key]
+                        )
+
+                    # Periodically save state to make sure progress is not lost
+                    if rows_saved % 1000 == 0:
+                        yield singer.StateMessage(value=copy.deepcopy(state))
+
+                # Fetch the next batch of rows.
+                rows = cursor.fetchmany(batch_size)
+
+            # Yield state one last time after processing all rows.
+            yield singer.StateMessage(value=copy.deepcopy(state))
 
 
 def generate_messages(conn, db_name, db_schema, catalog, state):
