@@ -390,9 +390,6 @@ def sync_table(connection, catalog_entry, state):
             select += ' ORDER BY {} ASC'.format(replication_key)
 
         time_extracted = utils.now()
-        query_string = cursor.mogrify(select, params)
-        LOGGER.info('Running {}'.format(query_string))
-
         batch_size = int(CONFIG.get('batch_size', ROWS_PER_NETWORK_CALL))
         LOGGER.info(f"Batch size: {batch_size}")
         cursor.itersize = batch_size
