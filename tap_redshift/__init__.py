@@ -333,7 +333,7 @@ def sync_table(connection, catalog_entry, state):
 
     tap_stream_id = catalog_entry.tap_stream_id
     LOGGER.info('Beginning sync for {} table'.format(tap_stream_id))
-    with connection.cursor(f"redshift_cursor_{secrets.token_hex(8)}") as cursor:
+    with connection.cursor() as cursor:
         schema, table = catalog_entry.table.split('-')
         database = catalog_entry.database
         select = 'SELECT {} FROM {}.{}.{}'.format(
