@@ -27,7 +27,7 @@ import datetime
 import sys
 import simplejson as json
 
-import psycopg2
+import redshift_connector
 import singer
 import singer.metrics as metrics
 from singer import metadata
@@ -282,13 +282,15 @@ def open_connection(config):
     user = config['user'],
     password = config['password']
     LOGGER.info(
-        f"Attempting Redshift connection: {dbname[0]} {host[0]} {port[0]}")
-    connection = psycopg2.connect(
+        f"Attempting Redshift connection: {dbname[0]} {host[0]} {port[0]}"
+    )
+    connection = redshift_connector.connect(
         host=host[0],
         port=port[0],
-        dbname=dbname[0],
+        database=dbname[0],
         user=user[0],
-        password=password)
+        password=password
+    )
     LOGGER.info('Connected to Redshift')
     return connection
 
@@ -364,15 +366,6 @@ def sync_table(connection, catalog_entry, state):
             version=stream_version
         )
 
-        # If there's a replication key, we want to emit an ACTIVATE_VERSION
-        # message at the beginning so the records show up right away. If
-        # there's no bookmark at all for this stream, assume it's the very
-        # first replication. That is, clients have never seen rows for this
-        # stream before, so they can immediately acknowledge the present
-        # version.
-
-        # (Ben Patch): Do not yield activate version message if there is a
-        # replication key as it will delete all records in the target table.
         if bookmark_is_empty:
             yield activate_version_message
 
@@ -410,10 +403,8 @@ def sync_table(connection, catalog_entry, state):
             counter.tags['database'] = catalog_entry.database
             counter.tags['table'] = catalog_entry.table
 
-            # Fetch the first batch of rows.
             rows = cursor.fetchmany(batch_size)
 
-            # Continue processing while there are rows to be processed.
             while rows:
                 for row in rows:
                     counter.increment()
@@ -428,7 +419,6 @@ def sync_table(connection, catalog_entry, state):
                     )
                     yield record_message
 
-                    # Update the replication key value in the state
                     if replication_key is not None:
                         state = singer.write_bookmark(
                             state,
@@ -437,14 +427,11 @@ def sync_table(connection, catalog_entry, state):
                             record_message.record[replication_key]
                         )
 
-                    # Periodically save state to make sure progress is not lost
                     if rows_saved % 1000 == 0:
                         yield singer.StateMessage(value=copy.deepcopy(state))
 
-                # Fetch the next batch of rows.
                 rows = cursor.fetchmany(batch_size)
 
-            # Yield state one last time after processing all rows.
             yield singer.StateMessage(value=copy.deepcopy(state))
 
 
